@@ -6,7 +6,7 @@ from django.conf import settings
 from django.core.files.base import ContentFile
 from django.template import Library, Context
 from django.template.base import Node, TemplateSyntaxError
-from django.utils.encoding import iri_to_uri
+from django.utils.encoding import iri_to_uri, force_bytes
 from django.utils.six.moves.urllib.parse import urljoin
 from sass_processor.utils import get_setting
 from ..storage import SassFileStorage, find_file
@@ -97,6 +97,7 @@ class SassSrcNode(Node):
         if self.sass_output_style:
             compile_kwargs['output_style'] = self.sass_output_style
         content, sourcemap = sass.compile(**compile_kwargs)
+        content, sourcemap = force_bytes(content), force_bytes(sourcemap)
         if self.storage.exists(css_filename):
             self.storage.delete(css_filename)
         self.storage.save(css_filename, ContentFile(content))
