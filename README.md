@@ -12,7 +12,7 @@ During development, a [sourcemap](https://developer.chrome.com/devtools/docs/css
 generated along side with the compiled ``*.css`` file. This allows to debug style sheet errors much
 easier.
 
-With this tool, you can safely remove your Ruby installations “Compass” and “SASS” from your Django
+With this tool, you can safely remove your Ruby installations "Compass" and "SASS" from your Django
 projects.
 
 
