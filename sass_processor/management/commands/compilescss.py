@@ -2,7 +2,6 @@
 import os
 import django
 import sass
-from optparse import make_option
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.template.loader import get_template  # noqa Leave this in to preload template locations
@@ -16,26 +15,26 @@ from sass_processor.utils import get_setting
 
 class Command(BaseCommand):
     help = "Compile SASS/SCSS into CSS outside of the request/response cycle"
-    option_list = BaseCommand.option_list + (
-        make_option(
+
+    def add_arguments(self, parser):
+        parser.add_argument(
             '--delete-files',
             action='store_true',
             dest='delete_files',
             default=False,
-            help='Delete generated `*.css` files instead of creating them.'),
-        make_option(
+            help='Delete generated `*.css` files instead of creating them.')
+        parser.add_argument(
             '--use-processor-root',
             action='store_true',
             dest='use_processor_root',
             default=False,
             help='Store resulting .css in settings.SASS_PROCESSOR_ROOT folder. '
-                 'Default: store each css side-by-side with .scss.'),
-        make_option(
+                 'Default: store each css side-by-side with .scss.')
+        parser.add_argument(
             '--engine',
             dest='engine',
             default='django',
-            help='Set templating engine used (django, jinja2). Default: django.'),
-    )
+            help='Set templating engine used (django, jinja2). Default: django.')
 
     def __init__(self):
         self.parser = None
