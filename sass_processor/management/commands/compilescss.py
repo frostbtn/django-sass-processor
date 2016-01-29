@@ -83,7 +83,11 @@ class Command(BaseCommand):
             try:
                 module = import_module(loader.__module__)
                 get_template_sources = getattr(module, 'get_template_sources', loader.get_template_sources)
-                paths.update(list(get_template_sources('')))
+                sources = get_template_sources('')
+                if django.VERSION >= (1, 9):
+                    paths.update(list(o.name for o in sources))
+                else:
+                    paths.update(list(sources))
             except (ImportError, AttributeError):
                 pass
         if not paths:
