@@ -1,15 +1,17 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
+
 from setuptools import setup, find_packages
 from sass_processor import __version__
 try:
     from pypandoc import convert
 except ImportError:
-    def convert(filename, fmt):
-        with open(filename) as fd:
-            return fd.read()
+    import io
 
+    def convert(filename, fmt):
+        with io.open(filename, encoding='utf-8') as fd:
+            return fd.read()
 
 CLASSIFIERS = [
     'Development Status :: 4 - Beta',
@@ -24,7 +26,6 @@ CLASSIFIERS = [
     'Programming Language :: Python :: 3',
 ]
 
-
 setup(
     name='django-sass-processor',
     version=__version__,
@@ -33,6 +34,7 @@ setup(
     author_email='jacob.rief@gmail.com',
     url='https://github.com/jrief/django-sass-processor',
     packages=find_packages(),
+    install_requires=['libsass'],
     license='LICENSE-MIT',
     platforms=['OS Independent'],
     classifiers=CLASSIFIERS,
