@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from __future__ import unicode_literals
+
 import os
 import django
 import sass
@@ -6,7 +8,9 @@ from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.template.loader import get_template  # noqa Leave this in to preload template locations
 from importlib import import_module
+from django.template.base import Origin
 from django.utils.encoding import force_bytes
+from django.utils.translation import gettext_lazy as _
 from compressor.exceptions import TemplateDoesNotExist, TemplateSyntaxError
 from sass_processor.templatetags.sass_tags import SassSrcNode
 from sass_processor.storage import find_file
@@ -15,26 +19,6 @@ from sass_processor.utils import get_setting
 
 class Command(BaseCommand):
     help = "Compile SASS/SCSS into CSS outside of the request/response cycle"
-
-    def add_arguments(self, parser):
-        parser.add_argument(
-            '--delete-files',
-            action='store_true',
-            dest='delete_files',
-            default=False,
-            help='Delete generated `*.css` files instead of creating them.')
-        parser.add_argument(
-            '--use-processor-root',
-            action='store_true',
-            dest='use_processor_root',
-            default=False,
-            help='Store resulting .css in settings.SASS_PROCESSOR_ROOT folder. '
-                 'Default: store each css side-by-side with .scss.')
-        parser.add_argument(
-            '--engine',
-            dest='engine',
-            default='django',
-            help='Set templating engine used (django, jinja2). Default: django.')
 
     def __init__(self):
         self.parser = None
@@ -46,6 +30,26 @@ class Command(BaseCommand):
         self.use_static_root = False
         self.static_root = ''
         super(Command, self).__init__()
+
+    def add_arguments(self, parser):
+        parser.add_argument('--delete-files',
+            action='store_true',
+            dest='delete_files',
+            default=False,
+            help=_("Delete generated `*.css` files instead of creating them.")
+        )
+        parser.add_argument('--use-processor-root',
+            action='store_true',
+            dest='use_processor_root',
+            default=False,
+            help=_("Store resulting .css in settings.SASS_PROCESSOR_ROOT folder. "
+                   "Default: store each css side-by-side with .scss.")
+        )
+        parser.add_argument('--engine',
+            dest='engine',
+            default='django',
+            help=_("Set templating engine used (django, jinja2). Default: django.")
+        )
 
     def handle(self, *args, **options):
         self.verbosity = int(options['verbosity'])
@@ -83,11 +87,8 @@ class Command(BaseCommand):
             try:
                 module = import_module(loader.__module__)
                 get_template_sources = getattr(module, 'get_template_sources', loader.get_template_sources)
-                sources = get_template_sources('')
-                if django.VERSION >= (1, 9):
-                    paths.update(list(o.name for o in sources))
-                else:
-                    paths.update(list(sources))
+                template_sources = get_template_sources('')
+                paths.update([t.name if isinstance(t, Origin) else t for t in template_sources])
             except (ImportError, AttributeError):
                 pass
         if not paths:
@@ -152,21 +153,26 @@ class Command(BaseCommand):
         try:
             template = self.parser.parse(template_name)
         except IOError:  # unreadable file -> ignore
-            self.stdout.write("Unreadable template at: %s\n" % template_name)
+            if self.verbosity > 0:
+                self.stdout.write("Unreadable template at: %s\n" % template_name)
             return
         except TemplateSyntaxError as e:  # broken template -> ignore
-            self.stdout.write("Invalid template %s: %s\n" % (template_name, e))
+            if self.verbosity > 0:
+                self.stdout.write("Invalid template %s: %s\n" % (template_name, e))
             return
         except TemplateDoesNotExist:  # non existent template -> ignore
-            self.stdout.write("Non-existent template at: %s\n" % template_name)
+            if self.verbosity > 0:
+                self.stdout.write("Non-existent template at: %s\n" % template_name)
             return
         except UnicodeDecodeError:
-            self.stdout.write("UnicodeDecodeError while trying to read template %s\n" % template_name)
+            if self.verbosity > 0:
+                self.stdout.write("UnicodeDecodeError while trying to read template %s\n" % template_name)
         try:
             nodes = list(self.walk_nodes(template, original=template))
         except Exception as e:
             # Could be an error in some base template
-            self.stdout.write("Error parsing template %s: %s\n" % (template_name, e))
+            if self.verbosity > 0:
+                self.stdout.write("Error parsing template %s: %s\n" % (template_name, e))
         else:
             for node in nodes:
                 if self.delete_files:
@@ -184,7 +190,7 @@ class Command(BaseCommand):
 
         compile_kwargs = {
             'filename': sass_filename,
-            'include_paths': node.include_paths,
+            'include_paths': node.sass_processor.include_paths,
             'custom_functions': custom_functions,
         }
         if self.sass_precision:
